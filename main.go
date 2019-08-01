@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -21,8 +22,8 @@ func init() {
 	table = make(map[string][]string)
 }
 
-func parse(fileName string) error {
-	buf, err := ioutil.ReadFile(fileName)
+func parse(input, output string) error {
+	buf, err := ioutil.ReadFile(input)
 	if err != nil {
 		return fmt.Errorf("Open file err, %+v", err)
 	}
@@ -34,7 +35,7 @@ func parse(fileName string) error {
 	}
 	lists := toLists(blockNum)
 	writeBuf := toCsv(lists)
-	err = ioutil.WriteFile(outputFileName, writeBuf, os.ModeAppend)
+	err = ioutil.WriteFile(output, writeBuf, os.ModeAppend)
 	if err != nil {
 		return fmt.Errorf("Write to file err, %+v", err)
 	}
@@ -50,15 +51,17 @@ func parseBlock(body string) (int, error) {
 		} else {
 			items := strings.Split(line, "：")
 			if len(items) != 2 {
-				return 0, fmt.Errorf("Split line err, item num:%d", len(items))
+				fmt.Printf("Warning: Split line err, item num: %d", len(items))
+				continue
 			}
-			if len(table[items[0]]) >= blockNum {
-				return 0, fmt.Errorf("key[%s], length err, blockNum=%d but len=%d", items[0], blockNum, len(table[items[0]]))
+			key, value := items[0], strings.Trim(items[1], "。")
+			if len(table[key]) >= blockNum {
+				return 0, fmt.Errorf("key[%s], length err, blockNum=%d but len=%d", key, blockNum, len(table[key]))
 			}
-			for len(table[items[0]]) < blockNum {
-				table[items[0]] = append(table[items[0]], "")
+			for len(table[key]) < blockNum {
+				table[key] = append(table[key], "")
 			}
-			table[items[0]][blockNum-1] = items[1]
+			table[key][blockNum-1] = value
 		}
 	}
 	for key := range table {
@@ -97,11 +100,17 @@ func toCsv(lists [][]string) []byte {
 }
 
 func isBegin(str string) bool {
-	return strings.Contains(str, "５")
+	return strings.IndexRune(str, '5') == 0
 }
 
 func main() {
-	err := parse(fileName)
+	fmt.Println("输入文件名:")
+	input := bufio.NewScanner(os.Stdin)
+	input.Scan()
+	inputFileName := input.Text()
+	outputFileName := strings.Split(inputFileName, ".")[0] + ".csv"
+
+	err := parse(inputFileName, outputFileName)
 	if err != nil {
 		fmt.Println("Parse file err, %+v", err)
 	}
