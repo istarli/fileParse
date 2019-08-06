@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	// "bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	fileName       = "./input.txt"
-	outputFileName = "./result.csv"
+	strange = "０１２３４５６７８９Ｊ"
 )
 
 var (
@@ -39,6 +38,8 @@ func parse(input, output string) error {
 	if err != nil {
 		return fmt.Errorf("Write to file err, %+v", err)
 	}
+	// clear table
+	table = make(map[string][]string)
 	return nil
 }
 
@@ -46,22 +47,27 @@ func parseBlock(body string) (int, error) {
 	blockNum := 0
 	lines := strings.Split(body, "\r\n")
 	for _, line := range lines {
+		line := strings.Trim(line, " ")
+		if len(line) == 0 {
+			continue
+		}
 		if isBegin(line) {
 			blockNum++
 		} else {
 			items := strings.Split(line, "：")
 			if len(items) != 2 {
-				fmt.Printf("Warning: Split line err, item num: %d", len(items))
+				// empty line
 				continue
 			}
 			key, value := items[0], strings.Trim(items[1], "。")
-			if len(table[key]) >= blockNum {
-				return 0, fmt.Errorf("key[%s], length err, blockNum=%d but len=%d", key, blockNum, len(table[key]))
-			}
 			for len(table[key]) < blockNum {
 				table[key] = append(table[key], "")
 			}
-			table[key][blockNum-1] = value
+			if len(table[key][blockNum-1]) == 0 {
+				table[key][blockNum-1] = value
+			} else {
+				table[key][blockNum-1] += (":" + value)
+			}
 		}
 	}
 	for key := range table {
@@ -90,28 +96,51 @@ func toLists(num int) [][]string {
 func toCsv(lists [][]string) []byte {
 	var buf bytes.Buffer
 	for _, list := range lists {
+		var bufline bytes.Buffer
+		emptyNum := 0
 		for _, item := range list {
-			buf.WriteString(item)
-			buf.WriteString(",")
+			if len(item) == 0 {
+				emptyNum++
+			}
+			bufline.WriteString(item)
+			bufline.WriteString(",")
 		}
-		buf.WriteString("\r\n")
+		bufline.WriteString("\r\n")
+		if emptyNum < len(list) {
+			buf.Write(bufline.Bytes())
+		}
 	}
 	return buf.Bytes()
 }
 
 func isBegin(str string) bool {
-	return strings.IndexRune(str, '5') == 0
+	chars := []rune(str)
+	if len(chars) < 2 {
+		return false
+	}
+	if chars[0] >= '0' && chars[0] <= '9' && chars[1] == '.' {
+		return true
+	}
+	if strings.ContainsRune(strange, chars[0]) && chars[1] == '．' {
+		return true
+	}
+	return false
 }
 
 func main() {
-	fmt.Println("输入文件名:")
-	input := bufio.NewScanner(os.Stdin)
-	input.Scan()
-	inputFileName := input.Text()
-	outputFileName := strings.Split(inputFileName, ".")[0] + ".csv"
-
-	err := parse(inputFileName, outputFileName)
-	if err != nil {
-		fmt.Println("Parse file err, %+v", err)
+	files := []string{
+		"JTT1022-2016.txt",
+		"JTT1055-2016.txt",
+		"JTT1057-2016.txt",
+		"JTT1075-2016.txt",
+		"JTT7353-2009.txt",
+		"JTT9792-2015.txt",
+	}
+	for _, input := range files {
+		output := strings.Split(input, ".")[0] + ".csv"
+		err := parse(input, output)
+		if err != nil {
+			fmt.Printf("Parse file err, %+v \n", err)
+		}
 	}
 }
