@@ -48,9 +48,6 @@ func parseBlock(body string) (int, error) {
 	lines := strings.Split(body, "\r\n")
 	for _, line := range lines {
 		line := strings.Trim(line, " ")
-		if len(line) == 0 {
-			continue
-		}
 		if isBegin(line) {
 			blockNum++
 		} else {
@@ -121,7 +118,7 @@ func isBegin(str string) bool {
 	if chars[0] >= '0' && chars[0] <= '9' && chars[1] == '.' {
 		return true
 	}
-	if strings.ContainsRune(strange, chars[0]) && chars[1] == '．' {
+	if chars[0] >= '０' && chars[0] <= '９' && chars[1] == '．' {
 		return true
 	}
 	return false
@@ -129,12 +126,12 @@ func isBegin(str string) bool {
 
 func main() {
 	files := []string{
-		"JTT1022-2016.txt",
-		"JTT1055-2016.txt",
-		"JTT1057-2016.txt",
-		"JTT1075-2016.txt",
+		// "JTT1022-2016.txt",
+		// "JTT1055-2016.txt",
+		// "JTT1057-2016.txt",
+		// "JTT1075-2016.txt",
 		"JTT7353-2009.txt",
-		"JTT9792-2015.txt",
+		// "JTT9792-2015.txt",
 	}
 	for _, input := range files {
 		output := strings.Split(input, ".")[0] + ".csv"
