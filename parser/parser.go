@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/istarli/fileParse/util"
 )
@@ -15,7 +16,7 @@ const (
 )
 
 type Parser struct {
-	CheckBegin func(string) (bool, bool)
+	CheckBegin func(*string) (bool, bool)
 }
 
 func NewParser() *Parser {
@@ -24,7 +25,7 @@ func NewParser() *Parser {
 	return p
 }
 
-func NewParserWithCheckFunc(fn func(string) (bool, bool)) *Parser {
+func NewParserWithCheckFunc(fn func(*string) (bool, bool)) *Parser {
 	return &Parser{
 		CheckBegin: fn,
 	}
@@ -57,11 +58,10 @@ func (p *Parser) parseBlock(body string, table map[string][]string) (int, error)
 	blockNum := 0
 	lines := strings.Split(body, "\r\n")
 	for _, line := range lines {
-		line := strings.Trim(line, " ")
 		if p.CheckBegin == nil {
 			p.CheckBegin = p.defaultCheckBegin
 		}
-		isBegin, isJump := p.CheckBegin(line)
+		isBegin, isJump := p.CheckBegin(&line)
 		if isBegin {
 			blockNum++
 		}
@@ -73,7 +73,10 @@ func (p *Parser) parseBlock(body string, table map[string][]string) (int, error)
 			fmt.Printf("invalid line:%s\n", line)
 			continue
 		}
-		key, value := items[0], strings.Trim(items[1], "。")
+		key := strings.TrimSpace(items[0])
+		value := strings.TrimFunc(items[1], func(char rune) bool {
+			return char == '。' || unicode.IsSpace(char)
+		})
 		for len(table[key]) < blockNum {
 			table[key] = append(table[key], "")
 		}
@@ -95,13 +98,14 @@ func (p *Parser) parseBlock(body string, table map[string][]string) (int, error)
 	return blockNum, nil
 }
 
-func (p *Parser) defaultCheckBegin(str string) (bool, bool) {
-	chars := []rune(str)
+func (p *Parser) defaultCheckBegin(str *string) (bool, bool) {
+	chars := []rune(*str)
 	if len(chars) < 2 {
 		return false, false
 	}
 	if (chars[0] >= '0' && chars[0] <= '9' && chars[1] == '.') ||
-		(chars[0] >= '０' && chars[0] <= '９' && chars[1] == '．') {
+		(chars[0] >= '０' && chars[0] <= '９' && chars[1] == '．') ||
+		(chars[0] == '—') {
 		return true, true
 	}
 	return false, false
